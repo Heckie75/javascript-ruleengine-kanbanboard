@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>jKanban - Example 1</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet"
+  href="http://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.css">
+<script
+  src="http://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script
+  src="http://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+
+<!-- kanban lib -->
+<script src="../js/kanban.js"></script>
+
+<!-- initializes var rules -->
+<script src="kanban/rules.js"></script>
+
+<!-- initializes var templates -->
+<script src="kanban/templates.js"></script>
+
+<script type="text/javascript">
+  $(document).ready(function() {
+
+    var kanban = new Kanban();
+    kanban.setDefaultTemplate('wide');
+    kanban.load('kanban/board.html', rules, null);
+
+    $.getJSON("../data/tickets.json", function(tickets) {
+      tickets = kanban.populate(tickets, true);
+      kanban.renderboard('div#board', templates);
+    });
+
+  });
+</script>
+</head>
+<body>
+  <div class="container">
+    <h1>jKanban - Example 1</h1>
+    <div id="board"></div>
+  </div>
+</body>
+</html>
