@@ -1,0 +1,46 @@
+:root {
+  color: #263430;
+  background: #f2f5f2;
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background: linear-gradient(140deg, #f3f6f2 0%, #e8efeb 100%);
+}
+
+.example-shell { padding: 28px 24px 48px; }
+.example-header { margin: 0 0 18px; }
+.eyebrow { margin: 0 0 8px; color: #147d70; font-size: 11px; font-weight: 700; letter-spacing: 1px; }
+h1 { margin: 0; font: 500 30px Georgia, "Times New Roman", serif; }
+.subtitle { margin: 5px 0 0; color: #64736f; font-size: 13px; }
+.unassigned-count { color: #933f31; font-size: 13px; }
+.board-viewport { overflow: auto; border: 1px solid #cad5cf; background: #fff; }
+.board-viewport table.listing { min-width: 100%; border-collapse: collapse; color: #263430; font: 11px/1.35 "Trebuchet MS", "Segoe UI", sans-serif; }
+.board-viewport th, .board-viewport td { min-width: 54px; border: 1px solid #d5ddd8; padding: 4px; vertical-align: top; }
+.board-viewport th { background: #f5f7f4; font-weight: 600; }
+.board-viewport td { height: 66px; }
+.board-viewport a { color: #126f65; }
+.board-viewport .ticket-full { width: 168px; max-width: 28vw; min-height: 54px; margin: 2px 0 5px; border: 1px solid #d0d5ae; padding: 6px; box-shadow: 0 2px 4px #20352b1c; font-size: 11px; }
+.board-viewport .ticket-small { display: inline-block; margin: 2px; border: 1px solid #c9d4ce; padding: 3px 5px; box-shadow: 0 1px 3px #20352b1c; font-size: 10px; }
+.board-viewport [data-kb-draggable="true"] { cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.board-viewport .is-dragging { position: relative; z-index: 3; opacity: 0.62; cursor: grabbing; }
+.board-viewport .is-drop-target { outline: 2px solid #147d70; outline-offset: -2px; }
+html.kanban-pointer-dragging, html.kanban-pointer-dragging * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  cursor: grabbing !important;
+}
+.view-toggle { border: 1px solid #aebdb5; background: #fff; color: #31544a; padding: 3px 6px; font: inherit; cursor: pointer; }
+
+@media (max-width: 700px) {
+  .example-shell { padding: 20px 12px 32px; }
+  h1 { font-size: 26px; }
+  .board-viewport .ticket-full { max-width: 42vw; }
+}

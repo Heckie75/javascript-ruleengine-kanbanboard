@@ -1,306 +1,410 @@
-# Rule-based table for agile
+# Modular Vue Kanban Board
 
-This project provides a flexible agile table written in JavaScript. I programmed it initially in 2012 in order to manage my project which was about development and running a multi-brand shop platform. The advantage was to manage our daily business with more than 100 feature requests and incidents of different priority per month. I used the issue tracking system [trac](https://trac.edgewall.org/). In this time I added several improvements to this software. This agile table is one of these improvements. 
+This project uses Vue 3 and ES modules. The board layout, matching rules, ticket
+data, and ticket presentation are separate modules. The table-based engine in
+`js/kanban.js` uses browser DOM APIs.
 
-An easy peasy example can be seen [here](http://heckie.de/kanban/example_01/index.html)
+## Run an Example
 
-## 1. General idea
+Open the repository in its Dev Container, then run an example:
 
-A kanban board is basicly a table. The _columns_ represent the steps of your process. In many cases you start with steps like 'todo', 'work in progress' and 'done'. Of course, this is a naiv example. According kanban the _rows_ represent different service classes so that you are able to handle tasks with different priority and limit the work in progress in terms of task's effort. 
+```sh
+npm run dev:example01
+npm run dev:example02
+npm run dev:example03
+```
 
-In the following example we see the process steps 'todo', 'work in progress' and 'done'. The service classes are 'incidents', which must probably handled with higher priority, 'change requests' und 'improvements'. Maybe 'improvements' are just little tasks in comparison to 'change requests'. _Tasks_ are represented by tickets that are sticked in cells of the table according their nature and status.
+Vite prints the URL. Production builds are `npm run build:example01` and
+`npm run build:example02` and `npm run build:example03`.
 
-![Schema](./doc/schema.png "Schema")
+## Create a Board
 
-In this example a task must be of type 'change request' in order to fulfil the rules of the row 'change requests'. To be allowed to stick the ticket in the column 'work in progress' the ticket must be in this state. In the end the right cell is the cell in which the ticket fulfills all rules that are defined in the headers of columns and rows. 
+Use this layout for a new example:
 
-## 2. Technical idea
+```text
+example_03/
+  index.html
+  data/tickets.json
+  kanban/board.html
+  kanban/rules.js
+  kanban/templates.js
+  src/main.js
+  src/App.vue
+  src/components/TicketCard.vue
+```
 
-I wanted to provide a Kanban board that is as flexible as possible. Since Kanban is about continuously improvements (Kaizen) something hard-coded wouldn't be good enough. Based on my professional background - I started my career as a software developer, consultant and trainer for a rule engine - I programmed something that is based on rules and a table. 
+The HTML table defines workflow columns and service-class rows. Put
+`data-kb-rules` and optional `data-kb-template` on header cells; the engine
+combines rules inherited from the row and column. Rule names are comma
+separated, and `!` negates a name.
 
-From a technical point of view the kanban board is based on
-1. an _HTML table_ which represent the kanban board
-2. _JavaScript snippets_ that represent rules 
-3. and more _JavaScript_ that renders the ticket
-
-## 3. Creating an agile table
-
-First of all you create a HTML table. There is special attribute called ```data-kb-rules``` that is used in order to tell the rule engine which rules must be fulfilled. This attribute is normally used in cells of type header, i.e. ```<th>```.  
-
-**Example 1 - ```board.html```**
 ```html
-  <table class="table table-bordered">
-    <thead class="bg-light">
-      <tr>
-        <th>Board</th>
-        <th data-kb-rules="!todo,!wip,!done">Backlog</th> <!-- three rules combined and negated by using exclamation mark -->
-        <th data-kb-rules="todo">Todo</th> <!-- rule called 'todo' is used in this column -->
-        <th data-kb-rules="wip">In progress</th> <!-- rule called 'wip' is used in this column -->
-        <th data-kb-rules="done" data-kb-template="small">Done</th> <!-- rule called 'done' is used in this column -->
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <th class="bg-light" data-kb-rules="blocker">Blocker</th> <!-- rule called 'blocker' is used in this row -->
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
-      </tr>
-      <tr>
-        <th class="bg-light">Minor Changes</th> <!-- no additional rule used here! -->
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
-      </tr>
-    </tbody>
-  </table>
+<table class="kanban-table">
+  <thead>
+    <tr>
+      <th>Service class</th>
+      <th data-kb-rules="!todo,!done" data-kb-template="full">Backlog</th>
+      <th data-kb-rules="todo" data-kb-template="compact">Todo</th>
+      <th data-kb-rules="done" data-kb-template="compact">Done</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th data-kb-rules="blocker">Blocker</th>
+      <td></td><td></td><td></td>
+    </tr>
+    <tr>
+      <th>Standard</th>
+      <td></td><td></td><td></td>
+    </tr>
+  </tbody>
+</table>
 ```
 
-As you can see this tables uses rules that are called ```todo```, ```wip``` and ```done``` in order to define the columns of the table. Rules can be combined by separating them with comma. Rules can be negated by using an exclamation mark. Another rule called ```blocker``` is used in order to define the rule of the first row. The second row does not seem to have a specific rule. 
+Save this as `kanban/board.html`. `rowspan` and `colspan` are supported. The
+engine assigns zero-based `data-kb-row` and `data-kb-col` coordinates during
+initialization; do not author those coordinates yourself.
 
-_But where are the rules?_
+### Board Attributes
 
-## 4. Defining the rules 
+| Attribute | Applies to | Meaning |
+| --- | --- | --- |
+| `data-kb-rules` | `<th>`, `<td>` | Comma-separated rule names. Prefix a name with `!` to negate it. Matching row and column rules are combined. |
+| `data-kb-template` | `<th>`, `<td>` | Template name resolved by the Vue presentation layer. A cell template overrides the inherited template. |
+| `data-kb-limit` | `<th>` | WIP maximum (`4`), range (`2,5`), open range (`2,`), or `-` for an unbounded displayed counter. An empty value disables the counter. |
+| `data-kb-limit-area` | `<th>` | Optional inclusive WIP area: `fromRow,fromCol,toRow,toCol`. Coordinates are zero-based; empty coordinates use the header coordinate, and `+N`/`-N` are relative offsets. Omitted areas are inferred from the table. |
+| `data-kb-callbacks` | `<th>` | Comma-separated names in the callback registry passed to `init` or `load`. |
+| `data-kb-callbacks-area` | `<th>` | Optional inclusive callback area, using the same coordinate syntax as `data-kb-limit-area`. |
+| `data-kb-ticket-id` | Ticket component root | Ticket identifier used to resolve drag/drop to its data record. Bind it from `ticket.id` in Vue. |
+| `data-toggle-view` | Example 2 toggle button | App-specific control that hides/shows rows with the matching `view` value. It is handled by Example 2's Vue app, not by the core engine. |
 
-The rules are defined by using a JavaScript object like this:
+The engine creates `data-kb-row` and `data-kb-col` on table cells during
+initialization. Pointer dragging adds `data-kb-draggable` to ticket roots.
+`debug(true)` adds `data-kb-debug-rule` to cells. An accepted native HTML drop
+adds the `data-kb-dragged` CSS class to the moved root. These are runtime
+markers; do not put them in the source table.
 
-**Example 1 - ```rules.js```**
-```javascript
-var rules = {
-  "todo" : {
-      "match" : function(ticket) {
-          return ticket["status"] === "todo";
-      },
-      "last" : false,
-      "style" : ''
-  },
-  "wip" : {
-      "match" : function(ticket) {
-          return ticket["status"] === "wip";
-      },
-      "last" : false,
-      "style" : ''
-  },
-  "done" : {
-      "match" : function(ticket) {
-          return ticket["status"] === "done";
-      },
-      "last" : false,
-      "style" : ''
-  },
-  "blocker" : {
-      "match" : function(ticket) {
-          return ticket["priority"] === "blocker";
-      },
-      "last" : false,
-      "style" : 'table-danger'
-  }
-};
-```
+### Rules
 
-Each rule has at least
-* a _name_, i.e. 'wip' 
-* a function called _match_ which takes an object, which represents the ticket that must be evaluated, and returns a boolean value
+Export a rules object from `kanban/rules.js`. A `match(ticket)` function is
+required; optional properties control transitions, sorting, inheritance, and
+cell styling.
 
-Optionally the rule has
-* a property called _last_ which tells the rule engine if other rules (of this column / row) are evaluated after evaluation of current rule.
-* a property called _style_ which tells the rule engine to add css styles when it renders the ticket
+```js
+const priorityRank = { blocker: 0, critical: 1, normal: 2, minor: 3 };
 
-Now, how is the ticket rendered? 
-
-
-## 5. Designing the tickets
-
-In order to render a ticket the rule engine calls JavaScript functions that are defined to be _templates_. A template is a function of a JavaScript object like this:
-
-**Example 1 - ```rules.js```**
-```javascript
-var templates = {
-  "wide" : function(ticket, styles) {
-    
-    var s = '';
-    s += '<div class="card mb-3">';
-    s += '  <div class="card-header">';
-    s += '    <div class="my-0 font-weight-bold">${id}</div>';
-    s += '  </div>';
-    s += '  <div class="card-body ${style}">${summary}</div>';
-    s += '  <div class="card-footer">';
-    s += '    <div class="row">';
-    s += '      <span class="">${assignee}</span>';
-    s += '    </div>';
-    s += '  </div>';
-    s += '</div>';
-
-    s = templates._fill(s, { "style" : styles === undefined || styles == "" ? "mark" : styles});
-    return templates._fill(s, ticket);
-  },
-  "small" : function(ticket, styles) {
-    var s = '';
-    s += '<div title="' + ticket["summary"] + '" kb-ticket-id=\"#'
-        + ticket["id"] + '\" style=\"background-color: #ffaa00; ' + styles
-        + '\">';
-    s += '<span>#' + ticket["id"] + '</span>';
-    s += '</div>';
-    return s;
-  },
-  "_fill" : function(template, ticket) {
-    for ( var p in ticket) {
-      if (ticket.hasOwnProperty(p)) {
-        var reg = new RegExp("\\$\\{" + p + "\\}", "g")
-        template = template.replace(reg, ticket[p]);
-      }
+export const rules = {
+  todo: {
+    match: (ticket) => ticket.status === 'todo',
+    transition: (ticket, transitions, negated) => {
+      if (!negated) transitions.push({ status: 'todo' });
+      return true;
     }
-    return template;
+  },
+  done: { match: (ticket) => ticket.status === 'done' },
+  blocker: {
+    match: (ticket) => ticket.priority === 'blocker',
+    style: 'background-color: #f5d6d1;'
+  },
+  releaseReady: {
+    match: (ticket) => ticket.status === 'ready',
+    last: true
+  },
+  byPriority: {
+    match: () => true,
+    sort: (ticketA, ticketB) =>
+      (priorityRank[ticketA.priority] ?? 99) - (priorityRank[ticketB.priority] ?? 99)
   }
 };
 ```
-In this example there are two templates/functions called 'wide' and 'small'. The function receives an object, which is the ticket that must be rendered, and in addition a string with extra styles. These styles are the ones that have been defined by the rules property ```style```.
 
-Now, let's put all together.
+Rules on a cell are conjunctive: every positive rule must match and every
+negated rule must fail. `last: true` stops collecting inherited rules beyond
+that rule. The built-in `LAST` rule does the same in table markup. The
+`sort(ticketA, ticketB)` comparator follows the Array sort contract and orders
+tickets within a cell. `conserven` carries tickets between cells as an advanced
+routing option.
 
-## 6. Integration in HTML
+### Multi-tenant Routing with `conserven`
 
-The kanban board must be integrated in your html code. The following steps are required:
+`conserven` names one or more routing pools. When a matching rule declares a
+pool, the ticket remains available to later cells whose matching rules declare
+the same pool. This lets one ticket appear in multiple tenant lanes when it is
+requested by or solved for multiple tenants. The engine passes the same ticket
+record through those cells; it does not clone the ticket.
 
-1. load ```kanban.js``` : This is the rule engine and API.
-2. load your rules as defined in step _4. Defining the rules_
-3. load your template as defined in step _5. Designing the tickets_
-4. define the container (```<div>```-element or other) in which the kanban board will be placed, e.g. ```<div id="board"></div>```
-5. Initiate _kanban_-object, set default template, load ```board.html``` and ticket data
+Example 3 uses a shared `req_or_solve` pool for tenants that can receive the
+same work and a `sync_tenants_b_d` pool for tickets shared between Tenant D/Tenant B routes:
 
-See HTML file of example 1:
-
-**Example 1 - ```index.html```**
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<title>jKanban - Example 1</title>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet"
-  href="http://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.css">
-<script
-  src="http://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-<script
-  src="http://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
-
-<!-- kanban lib -->
-<script src="../js/kanban.js"></script>
-
-<!-- initializes var rules -->
-<script src="kanban/rules.js"></script>
-
-<!-- initializes var templates -->
-<script src="kanban/templates.js"></script>
-
-<script type="text/javascript">
-  $(document).ready(function() {
-
-    var kanban = new Kanban();
-    kanban.setDefaultTemplate('wide');
-    kanban.load('kanban/board.html', rules, null);
-
-    $.getJSON("../data/tickets.json", function(tickets) {
-      tickets = kanban.populate(tickets, true);
-      kanban.renderboard('div#board', templates);
-    });
-
-  });
-</script>
-</head>
-<body>
-  <div class="container">
-    <h1>jKanban - Example 1</h1>
-    <div id="board"></div>
-  </div>
-</body>
-</html>
+```js
+rule_req_or_solve_tenant_c: {
+  match: (ticket) => ticket.client === 'Tenant C' || ticket.ru === '1',
+  conserven: ['req_or_solve', 'sync_tenants_b_d']
+},
+rule_req_or_solve_tenant_b: {
+  match: (ticket) => ticket.client === 'Tenant B' || ticket.nl === '1',
+  conserven: ['req_or_solve']
+},
+rule_sync_tenants_b_d: {
+  match: (ticket) => ticket.at === '1' && ticket.nl === '1',
+  conserven: ['sync_tenants_b_d']
+}
 ```
 
-## 7. Take a look at the example
+Pool names are application-defined strings. A producer and the later consumer
+rules must use the same name. Cells are traversed in table order, so arrange
+tenant sections in the intended routing order. The Example 3 fixture and unit
+test demonstrate a multi-solved-for ticket routed into multiple cells.
 
-The example can be found here http://www.heckie.de/kanban/example_01/index.html
+Built-in rule names are `MATCH_ALWAYS` (always matches), `MATCH_NEVER` (never
+matches), and `LAST` (matches and stops collecting inherited rules). The
+engine's `EXAMPLE` rule is internal and is not part of the supported board API.
+Other rule names in `data-kb-rules` must exist in the supplied rules object;
+unknown names cause initialization to fail.
 
-It should look like this screenshot:
-![Example 1](./example_01/example_01.png "Example 1")
+Rule API:
 
-The code of the example is in sub-folder of [Example 01](./example_01)
+| Property | Signature | Meaning |
+| --- | --- | --- |
+| `match` | `(ticket) => boolean` | Required predicate used when routing records into cells. |
+| `last` | `boolean` | Stops collecting inherited rules after this rule when true. |
+| `sort` | `(ticketA, ticketB) => number` | Orders the cell's assigned tickets using the standard comparator convention. |
+| `style` | `string` | CSS declarations contributed to the cell's presentation for a positive matching rule. |
+| `conserven` | `string \| string[]` | Routing groups used to carry a ticket forward through later cells. |
+| `transition` | `(ticket, transitions, negated) => boolean` | Adds proposed changes for a drop into a cell using this rule. |
 
-The ticket data that is loaded looks like this:
-```javascript
-[
-  {
-      "id" : "#1",
-      "summary" : "Program this",
-      "priority" : "normal",
-      "status" : "done",
-      "assignee" : "heckie"
-  },
-  {
-      "id" : "#3",
-      "summary" : "Program that",
-      "priority" : "normal",
-      "status" : "wip",
-      "assignee" : "heckie"
-  },
-  {
-      "id" : "#9",
-      "summary" : "Program it totally different",
-      "priority" : "normal",
-      "status" : "todo",
-      "assignee" : "heckie"
-  },
-  {
-      "id" : "#42",
-      "summary" : "Program that again",
-      "priority" : "normal",
-      "status" : "",
-      "assignee" : "heckie"
-  },
-  {
-      "id" : "#75",
-      "summary" : "This doesn't work at all",
-      "priority" : "blocker",
-      "status" : "",
-      "assignee" : "heckie"
+The engine evaluates target-cell transition functions during a drop, from the
+last resolved rule toward the first. Each may append an application-defined
+change object to the shared `transitions` array. `negated` tells the function
+whether the corresponding rule name was prefixed with `!`. Returning `false`
+stops evaluating earlier transition callbacks; it does not itself reject the
+drop. The configured drop action makes the accept/reject decision.
+
+Example: a transition proposes a status change, and the drop action applies
+the proposals to the in-memory ticket:
+
+```js
+todo: {
+  match: (ticket) => ticket.status === 'todo',
+  transition: (ticket, transitions, negated) => {
+    if (!negated) transitions.push({ status: 'todo' });
+    return true;
   }
-]
+}
+
+kanban.setDropAction((ticket, transitions) => {
+  for (const changes of transitions) Object.assign(ticket, changes);
+  return true;
+});
 ```
 
-## 8. Real world
+### WIP Limits
 
-Of course, this was a trival example. Our process in real world with 5 different clients was much more complex. In order to give an expression I took two screenshots which show how it looked like in TRAC.
+Put `data-kb-limit` on a header cell. A number sets a maximum; `2,5` sets a
+minimum and maximum. `data-kb-limit-area` optionally defines the inclusive
+counting rectangle as `fromRow,fromCol,toRow,toCol`, using zero-based
+coordinates. Empty or signed coordinates are relative to the header cell. If
+the area is omitted, the engine derives it from the table structure.
 
-Screenshot - Multiclient board
-![Real world 1](./doc/real_board_screenshot.png "Real world 1")
+Call `populate(tickets, true)` to calculate WIP counts at startup. Example 2
+also repopulates with validation after an accepted drop, so both affected
+counters update immediately.
 
-Screenshot - Single client board with backlog (story map)
-![Real world 2](./doc/real_board_screenshot2.png "Real world 2")
+Validation adds one status class to the `<th>` and to its generated `.wip`
+counter:
 
-# Appendix
+| Class | Meaning |
+| --- | --- |
+| `wip_ok` | The distinct ticket count is within the configured range, including its bounds. |
+| `wip_low` | The count is below the configured minimum. |
+| `wip_high` | The count is above the configured maximum. |
+| `wip_unknown` | The count could not be classified against the range, for example because a bound is not numeric. |
 
-_Documentation is missing. To be continued..._
+Style the header and/or the counter element in your stylesheet:
 
-## A. HTML Table attributes
+```css
+th.wip_ok .wip { background: #d7f0df; color: #174b2b; }
+th.wip_low .wip { background: #fff0c2; color: #694d00; }
+th.wip_high .wip { background: #f7d8d5; color: #76251e; }
+th.wip_unknown .wip { background: #e7e9ec; color: #41474d; }
+```
 
-_Features are available. Documentation is missing. To be continued..._
+`populate(tickets, true)` resets the previous WIP classes and recalculates
+counts. Call `validate()` after changing assignments through another path. A
+Vue board should reroute its tickets and call `populate(tickets, true)` after an
+accepted drop, then render the updated cell components.
 
-* Advanced tables with row and col spans
-* Splitting cards
-* Drag & drop support
-* Playing with call back 
+## Vue Ticket Templates
 
-## B. JavaScript rule objects
+`kanban/templates.js` exports template metadata and helpers. The engine tells
+the app which template is assigned to each cell; a Vue component renders the
+ticket record:
 
-_Features are available. Documentation is missing. To be continued..._
+```js
+export const ticketTemplates = {
+  full: { variant: 'full' },
+  compact: { variant: 'compact' }
+};
+```
 
-* Transistions
+```vue
+<script setup>
+defineProps({ ticket: { type: Object, required: true } });
+</script>
 
-## C. JavaScript API
+<template>
+  <article class="ticket-card" :data-kb-ticket-id="ticket.id">
+    <strong>#{{ ticket.id }}</strong>
+    <p>{{ ticket.summary }}</p>
+  </article>
+</template>
+```
 
-_Features are available. Documentation is missing. To be continued..._
+Ticket fields use Vue text bindings. See [Example 2's TicketCard](example_02/src/components/TicketCard.vue)
+for full and compact presentations, badges, age, originator, and priority
+styling.
 
-* Other function and debugging
+### Template API
+
+The engine resolves a template name per cell. `getTemplateFromCell(row, col)`
+returns that name; `getStylesFromCell(row, col)` returns styles from matching
+rules. The Vue application uses the name to look up metadata and pass both
+values to the ticket component:
+
+```js
+export const ticketTemplates = {
+  small: { variant: 'small', alert: null },
+  default: { variant: 'full', alert: null },
+  alert_blocker: { variant: 'full', alert: 'blocker' }
+};
+```
+
+The Example 2 ticket component accepts `ticket`, `templateName`, and
+`ruleStyles` props. Each component root binds `data-kb-ticket-id="ticket.id"`
+so the engine can identify it during a drop.
+
+## Vue Integration
+
+The page entry point is ordinary HTML with a module script:
+
+```html
+<div id="app"></div>
+<script type="module" src="./src/main.js"></script>
+```
+
+`main.js` mounts the app:
+
+```js
+import { createApp } from 'vue';
+import App from './App.vue';
+import './style.css';
+
+createApp(App).mount('#app');
+```
+
+In `App.vue`, import the table, rules, and JSON data, then initialize the
+engine. `?raw` imports the table as a string:
+
+```js
+import boardMarkup from '../kanban/board.html?raw';
+import tickets from '../data/tickets.json';
+import { Kanban } from '../../js/kanban.js';
+import { rules } from '../kanban/rules.js';
+
+const kanban = new Kanban();
+kanban.setDefaultTemplate('full');
+kanban.init(boardMarkup, rules);
+const unassigned = kanban.populate(tickets, true);
+const table = kanban.getBoardElement();
+```
+
+For each `td[data-kb-col]`, read its zero-based row/column coordinates and use
+`getTicketsFromCell(row, col)`, `getTemplateFromCell(row, col)`, and
+`getStylesFromCell(row, col)` to create Vue ticket components in that cell.
+Example 2's `App.vue` shows the complete setup and cleanup.
+
+## Drag and Drop
+
+Configure the engine with a ticket selector and a drop action. Each ticket
+component's root must have `data-kb-ticket-id`.
+
+```js
+kanban.setTicketSelector((id, ticket) => String(ticket.id) === String(id));
+kanban.setDropAction((ticket, transitions) => {
+  for (const changes of transitions) Object.assign(ticket, changes);
+  return true;
+});
+kanban.setDropObserver(() => {
+  // In Vue: unmount old cell components, repopulate with validation,
+  // then render components with each destination cell's template.
+});
+kanban.enablePointerDragAndDrop();
+```
+
+The engine checks destination rules' `transition(ticket, transitions,
+negated)` functions before calling the drop action. Return `false` from the drop
+action to reject a move. The observer runs only after an accepted move; use it
+to reroute tickets, recalculate WIP counts, and select the destination cell's
+template. The transition adapter updates only in-memory ticket data; connect it
+to a backend if changes need to persist.
+
+## Core Kanban API
+
+Import the engine as an ES module and initialize it before using board methods:
+
+```js
+import { Kanban } from '../../js/kanban.js';
+
+const kanban = new Kanban();
+kanban.setDefaultTemplate('default');
+kanban.init(boardMarkup, rules, callbacks);
+const unassigned = kanban.populate(tickets, true);
+```
+
+| Method | Signature | Purpose |
+| --- | --- | --- |
+| `setDefaultTemplate` | `(name)` | Sets the default presentation name for cells without an inherited template. |
+| `init` | `(markup, rules, callbacks?)` | Initializes from a table element or markup containing a table, the rules object, and an optional callback registry. |
+| `load` | `async (url, rules, callbacks?)` | Fetches table markup, initializes the board, and resolves to the engine instance. |
+| `populate` | `(tickets, validate?)` | Clears prior assignments, routes the supplied records, optionally validates WIP, and returns unmatched records. |
+| `validate` | `()` | Recalculates WIP headers from their configured areas. |
+| `reset` | `()` | Clears cell assignments and rendered contents, restores WIP labels, and runs callback resets. |
+| `getBoardElement` | `()` | Returns the initialized table element for mounting or querying. |
+| `getTicketsFromCell` | `(row, col)` | Returns records assigned to zero-based table coordinates. |
+| `getTicketsFromArea` | `({ from, to })` | Returns records in an inclusive area with `{ row, col }` endpoints. |
+| `getTemplateFromCell` | `(row, col)` | Returns the resolved template name for a cell. |
+| `getStylesFromCell` | `(row, col)` | Returns style values contributed by matching rules. |
+| `getRuleNamesFromCell` | `(row, col)` | Returns resolved rule names, including `!` prefixes for negated rules. |
+| `renderboard` | `(target, presentations)` | Renders assigned tickets into the initialized table and attaches it to a selector or DOM element. Vue apps can instead mount components into `getBoardElement()` cells. |
+| `debug` | `(enabled)` | Adds or removes rule/template diagnostics in cell titles. |
+| `compile` | `()` | Writes resolved rules, templates, and WIP areas back to table attributes. |
+| `triggerCallbacks` | `()` | Runs callback `perform` handlers for their areas. |
+| `setTicketSelector` | `(selector)` | Sets `(ticketId, ticket) => boolean` for finding the record represented by a dragged root. |
+| `setDropAction` | `(action)` | Sets `(ticket, transitions) => boolean`; a truthy return accepts the move. |
+| `setDropObserver` | `(observer)` | Sets `(ticketId, sourceCell, targetCell) => void`, called after an accepted move. |
+| `removeDropAction` | `()` | Disables drops by removing the configured drop action. |
+| `enableDragAndDrop` | `()` | Enables native HTML drag/drop on ticket roots and cells. |
+| `enablePointerDragAndDrop` | `()` | Enables pointer-based dragging for component-rendered ticket roots. |
+
+Callback entries are keyed by the names in `data-kb-callbacks`. Each entry may
+provide `perform(tickets, header, board)` and `reset(header, board)` methods.
+
+## Project Examples and Tests
+
+- [Example 1](example_01/src) is a small Vue board with declarative rows and
+  columns in `board.js` and a pure routing module.
+- [Example 2](example_02/src) uses a complex table, rule-driven
+  transitions, WIP limits, Vue ticket components, pointer drag/drop, and a
+  demo-only permission adapter.
+- [Example 3](example_03/src) extends the complex table across multiple
+  tenants and demonstrates shared routing with `conserven`.
+
+Run checks in the Dev Container:
+
+```sh
+npm test
+npm run test:e2e
+```
+
+The unit suite covers routing and rule behavior. Chromium tests cover native
+drag/drop, both Vue examples, WIP refresh, and destination template changes.

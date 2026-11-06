@@ -1,0 +1,472 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html><head>
+
+
+  
+  <meta content="text/html; charset=ISO-8859-1" http-equiv="content-type"><title>Kanbanboard 2013-09-07</title></head><body>
+<table class="listing" border="1" cellpadding="2" cellspacing="0">
+
+  <thead> <tr>
+    <th colspan="3">Kanban-Board<br>
+Tenant C </th>
+    <th data-kb-template="small" data-kb-rules="rule_progress_backlog">Input<br>
+Queue </th>
+    <th><br>
+    </th>
+    <th data-kb-template="default" data-kb-rules="rule_progress_analysis" colspan="2">Analysis</th>
+    <th><br>
+    </th>
+    <th data-kb-template="default" data-kb-rules="rule_progress_clearing,!rule_owner_software_agency,!rule_owner_frontend_agency">Clearing<br>
+Customer </th>
+    <th data-kb-template="default" data-kb-rules="rule_progress_clearing,rule_owner_software_agency" colspan="4">Clearing<br>
+Software agency </th>
+    <th><br>
+    </th>
+    <th><br>
+    </th>
+    <th data-kb-template="default" data-kb-rules="rule_progress_impl" colspan="2">Implementation</th>
+    <th><br>
+    </th>
+    <th data-kb-template="small" data-kb-rules="rule_progress_qa_ready" colspan="2"><a href="/tracker/projects/client/report/310">QA</a></th>
+    <th data-kb-template="default" data-kb-rules="rule_progress_qa_failed" colspan="2"><a href="/tracker/projects/client/report/310">QA Failed /
+Support</a></th>
+    <th><br>
+    </th>
+    <th data-kb-template="small" data-kb-rules="!rule_liveqa_support" colspan="2"><a href="/tracker/projects/client/report/410">Live-QA</a></th>
+    <th data-kb-template="default" data-kb-rules="rule_progress_liveqa_failed" colspan="2"><a href="/tracker/projects/client/report/410">Live-QA
+Failed / Support</a></th>
+    <th data-kb-template="small" data-kb-rules="rule_progress_liveqa_passed"><a href="/tracker/projects/client/report/410">Live-QA passed</a></th>
+    <th><br>
+    </th>
+    <th data-kb-template="small" data-kb-rules="rule_progress_closed,!rule_progress_on_hold"><a href="/tracker/projects/client/report/650?INTERVAL=IYYY+%2F+IW&amp;PROJECT=ALL&amp;SUBPROJECT=">Closed</a><br>
+    <nobr style="font-weight: normal; font-size: 9pt;">(&lt; 1W)</nobr></th>
+    <th><br>
+    </th>
+  </tr>
+  <tr>
+    <th rowspan="1" colspan="2">Version:<br>
+2015-12-28</th>
+    <th style="vertical-align: top;">WiP<br>
+    </th>
+    <th data-kb-limit-area=",,8,3" data-kb-limit="-"><br>
+    </th>
+    <th><br>
+    </th>
+    <th data-kb-rules="!rule_twikit_done">Todo</th>
+    <th data-kb-rules="rule_twikit_done">Done</th>
+    <th><br>
+    </th>
+    <th><br>
+    </th>
+    <th data-kb-template="small" data-kb-rules="!rule_status_accepted,!rule_twikit_assigned,!rule_twikit_sth_todo_state">Backlog</th>
+    <th><br>
+    </th>
+    <th data-kb-rules="!rule_twikit_done">Todo</th>
+    <th data-kb-rules="rule_twikit_done">Done</th>
+    <th><br>
+    </th>
+    <th><br>
+    </th>
+    <th data-kb-rules="!rule_twikit_done">Todo</th>
+    <th data-kb-rules="rule_twikit_done">Done</th>
+    <th><br>
+    </th>
+    <th data-kb-rules="!rule_coming_release"><a href="/tracker/projects/client/report/210">Waiting</a></th>
+    <th data-kb-template="default" data-kb-rules="rule_coming_release,!rule_qa_support"><a href="/tracker/projects/client/report/310">Ready</a></th>
+    <th data-kb-rules="rule_coming_release,rule_qa_support,rule_twikit_todo_or_assigned_or_qa_failed,!rule_twikit_done,LAST">Todo</th>
+    <th data-kb-rules="rule_coming_release,rule_qa_support,rule_twikit_done,LAST">Done</th>
+    <th><br>
+    </th>
+    <th data-kb-rules="rule_progress_liveqa_backlog,!rule_progress_liveqa_passed"><a href="/tracker/projects/client/report/310">Waiting</a></th>
+    <th data-kb-template="default" data-kb-rules="rule_progress_liveqa_ready,!rule_progress_liveqa_passed"><a href="/tracker/projects/client/report/410">Ready</a></th>
+    <th data-kb-rules="!rule_progress_closed,rule_liveqa_support,rule_twikit_todo_or_assigned_or_qa_failed,!rule_twikit_done,LAST">Todo</th>
+    <th data-kb-rules="!rule_progress_closed,rule_liveqa_support,rule_twikit_done,LAST">Done</th>
+    <th><br>
+    </th>
+    <th><br>
+    </th>
+    <th data-kb-limit-area=",,8,29" data-kb-limit="12,"><br>
+    </th>
+    <th><br>
+    </th>
+  </tr>
+  </thead> <tbody>
+    <tr>
+      <th style="width: 24px;"><br>
+      </th>
+      <th data-kb-rules="rule_fastlane">Fastlane<br>
+      <nobr style="font-weight: normal; font-size: 9pt;">(Blocker)</nobr></th>
+      <th><nobr style="font-weight: normal;"></nobr></th>
+      <td data-kb-template="alert_blocker" data-kb-rules="rule_progress_fastlane"><br>
+      </td>
+      <th><br>
+      </th>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <th><br>
+      </th>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <th><br>
+      </th>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <th><br>
+      </th>
+      <th><br>
+      </th>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <th><br>
+      </th>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <th><br>
+      </th>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <th data-kb-limit=""><br>
+      </th>
+      <td><br>
+      </td>
+      <th><br>
+      </th>
+    </tr>
+    
+    
+    
+    
+    
+    
+    <tr>
+      <th><button type="button" class="view-toggle" data-toggle-view="Tenant C (ORG)" aria-label="Toggle Tenant C group" aria-expanded="true">Toggle</button></th>
+      <th data-kb-limit="" colspan="29"><big>Tenant C</big></th>
+      <th><br>
+      </th>
+    </tr>
+    <tr view="Tenant C (ORG)">
+      <th><br>
+      </th>
+      <th><br>
+      </th>
+      <th>WiP</th>
+      <th data-kb-limit="1,4"><nobr style="font-weight: normal;">4</nobr></th>
+      <th><br>
+      </th>
+      <th data-kb-limit="1" colspan="2"><nobr style="font-weight: normal;">1</nobr></th>
+      <th><br>
+      </th>
+      <th data-kb-limit="4" colspan="2"><nobr style="font-weight: normal;">4</nobr></th>
+      <th><br>
+      </th>
+      <th data-kb-limit="1" colspan="2"><nobr style="font-weight: normal;">1</nobr></th>
+      <th><br>
+      </th>
+      <th><br>
+      </th>
+      <th colspan="2" data-kb-limit="1,2"><nobr style="font-weight: normal;">2</nobr></th>
+      <th><br>
+      </th>
+      <th data-kb-limit="2"><nobr style="font-weight: normal;">-</nobr></th>
+      <th data-kb-limit="4" colspan="3"><nobr style="font-weight: normal;">4</nobr></th>
+      <th data-kb-limit=""><br>
+      </th>
+      <th data-kb-limit="-"><nobr style="font-weight: normal;">-</nobr></th>
+      <th data-kb-limit="4" colspan="3"><nobr style="font-weight: normal;">4</nobr></th>
+      <th data-kb-limit="-">-</th>
+      <th><br>
+      </th>
+      <th data-kb-limit="6,"><nobr style="font-weight: normal;"> &gt; 6<br>
+      </nobr></th>
+      <th><br>
+      </th>
+    </tr>
+    <tr view="Tenant C (ORG)">
+      <th data-kb-rules="rule_req_or_solve_tenant_c,LAST" rowspan="4"><br>
+      </th>
+      <th data-kb-rules="rule_class_accelerated">Accelerated<br>
+      <nobr style="font-weight: normal; font-size: 9pt;">(Critical)</nobr></th>
+      <th data-kb-limit="1"><nobr style="font-weight: normal;">1</nobr></th>
+      <td data-kb-template="alert_accelerated"><br>
+      </td>
+      <th rowspan="4"><br>
+      </th>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <th rowspan="4"><br>
+      </th>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <th rowspan="4"><br>
+      </th>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <th data-kb-rules="rule_req_or_solve_tenant_c,LAST" rowspan="4"><br>
+      </th>
+      <th data-kb-rules="rule_class_accelerated"><br>
+      </th>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <th rowspan="1"><br>
+      </th>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <th rowspan="1"><br>
+      </th>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <th data-kb-limit="" rowspan="4"><br>
+      </th>
+      <td><br>
+      </td>
+      <th><br>
+      </th>
+    </tr>
+    <tr view="Tenant C (ORG)">
+      <th style="vertical-align: top;" data-kb-rules="rule_class_support">Support<br>
+      </th>
+      <th style="vertical-align: top;" data-kb-limit="-">-<br>
+      </th>
+      <td style="vertical-align: top;"><br>
+      </td>
+      <td style="vertical-align: top;"><br>
+      </td>
+      <td style="vertical-align: top;"><br>
+      </td>
+      <td style="vertical-align: top;"><br>
+      </td>
+      <td style="vertical-align: top;"><br>
+      </td>
+      <td style="vertical-align: top;"><br>
+      </td>
+      <td style="vertical-align: top;"><br>
+      </td>
+      <th style="vertical-align: top;" data-kb-rules="rule_class_support"><br>
+      </th>
+      <th colspan="13" rowspan="1" style="vertical-align: top;"><br>
+      </th>
+      <td style="vertical-align: top;"><br>
+      </td>
+      <th style="vertical-align: top;"><br>
+      </th>
+    </tr>
+    <tr view="Tenant C (ORG)">
+      <th data-kb-rules="rule_class_fixed_date">Fixed Date<nobr style="font-weight: normal; font-size: 9pt;"></nobr></th>
+      <th data-kb-limit="1"><nobr style="font-weight: normal;">1</nobr></th>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <th data-kb-rules="rule_class_fixed_date"><br>
+      </th>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <th colspan="1" rowspan="2" style="vertical-align: top;"><br>
+      </th>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <th colspan="1" rowspan="2" style="vertical-align: top;"><br>
+      </th>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td align="center" valign="top"><br>
+      </td>
+      <th><br>
+      </th>
+    </tr>
+    <tr view="Tenant C (ORG)">
+      <th>Standard <nobr style="font-weight: normal; font-size: 9pt;"></nobr></th>
+      <th data-kb-limit="12"><nobr style="font-weight: normal;">12</nobr></th>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <th><br>
+      </th>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td><br>
+      </td>
+      <td align="center" valign="top"><br>
+      </td>
+      <th><br>
+      </th>
+    </tr>
+    <tr>
+      <th data-kb-template="small" data-kb-limit="" data-kb-rules="LAST"><button type="button" class="view-toggle" data-toggle-view="Keller" aria-label="Toggle Keller group" aria-expanded="true">Toggle</button></th>
+      <th data-kb-rules="LAST" data-kb-template="small" data-kb-limit="" colspan="29"><span style="font-style: italic;">Keller</span></th>
+      <th><br>
+      </th>
+    </tr>
+    <tr view="Keller">
+      <th><br>
+      </th>
+      <th><br>
+      </th>
+      <th><br>
+      </th>
+      <th rowspan="1" data-kb-rules="rule_sort_by_ticketid,rule_req_tenant_c_fix,LAST" colspan="27">Tenant C</th>
+      
+      
+      <th><br>
+      </th>
+    </tr>
+    <tr view="Keller">
+      <th><br>
+      </th>
+      <th><br>
+      </th>
+      <th>&#8721;</th>
+      <th rowspan="1" data-kb-limit="-" colspan="27"><nobr style="font-weight: normal;">-</nobr><nobr style="font-weight: normal;"></nobr><nobr style="font-weight: normal;"></nobr></th>
+      
+      
+      <th><br>
+      </th>
+    </tr>
+    <tr view="Keller">
+      <th><br>
+      </th>
+      <th data-kb-rules="!rule_progress_on_hold,rule_progress_not_in_progress"><a href="/tracker/tenant-b/report/200"> Not in progress</a></th>
+      <th data-kb-limit="-"><nobr style="font-weight: normal;">-</nobr></th>
+      <td rowspan="1" colspan="27"><br>
+</td>
+      
+      
+      <th><br>
+      </th>
+    </tr>
+    <tr view="Keller">
+      <th><br>
+      </th>
+      <th data-kb-rules="rule_progress_on_hold"><a href="/tracker/tenant-b/report/200"> On hold</a></th>
+      <th data-kb-limit="-"><nobr style="font-weight: normal;">-</nobr></th>
+      <td rowspan="1" colspan="27"><br>
+
+</td>
+      
+      
+      <th><br>
+      </th>
+    </tr>
+    <tr view="Keller">
+      <th data-kb-limit="" colspan="30"><br>
+      </th>
+      <th><br>
+      </th>
+    </tr>
+    <tr>
+      <th><br>
+      </th>
+      <th>Lost &amp; found</th>
+      <th data-kb-limit="0"><nobr style="font-weight: normal;">-</nobr></th>
+      <td data-kb-template="small" data-kb-rules="MATCH_ALWAYS,LAST" colspan="27"><br>
+      </td>
+      <th><br>
+      </th>
+    </tr>
+    <tr>
+      <th colspan="31"><br>
+      </th>
+    </tr>
+  </tbody>
+</table>
+
+</body></html>

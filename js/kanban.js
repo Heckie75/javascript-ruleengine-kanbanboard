@@ -23,7 +23,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-function Kanban() {
+export function Kanban() {
   // for internal purposes only
   var DEFAULT_RULES = {
     EXAMPLE : {
@@ -69,23 +69,23 @@ function Kanban() {
     }
   };
 
+  var escapeHtml = function(value) {
+    return String(value).replace(/[&<>"']/g, function(character) {
+      return {
+        '&' : '&amp;',
+        '<' : '&lt;',
+        '>' : '&gt;',
+        '"' : '&quot;',
+        "'" : '&#39;'
+      }[character];
+    });
+  };
+
   var DEFAULT_RENDERER = function(ticket, styles) {
-    var s = '<nobr style="' + styles.join(' ') + '">';
-    if (typeof ticket == 'object') {
-      var i = 0;
-      for (p in ticket) {
-        if (!ticket.hasOwnProperty(p)) {
-          continue;
-        }
-        if (++i > 2)
-          break;
-        s += ticket[p] + ' ';
-      }
-    } else {
-      s = ticket;
-    }
-    s += '</nobr> ';
-    return s;
+    var values = typeof ticket == 'object' ? Object.keys(ticket).slice(0, 2).map(function(key) {
+      return escapeHtml(ticket[key]);
+    }).join(' ') : escapeHtml(ticket);
+    return '<span style="' + escapeHtml((styles || []).join(' ')) + '">' + values + '</span> ';
   };
 
   var ArrayList = function() {
@@ -145,11 +145,11 @@ function Kanban() {
   };
 
   var getArea = function(e) {
-    var row = parseInt($(e).attr('data-kb-row'));
-    var col = parseInt($(e).attr('data-kb-col'));
-    var _rowspan = $(e).attr('rowspan');
+    var row = parseInt(e.getAttribute('data-kb-row'));
+    var col = parseInt(e.getAttribute('data-kb-col'));
+    var _rowspan = e.getAttribute('rowspan');
     _rowspan = _rowspan ? parseInt(_rowspan) : 1;
-    var _colspan = $(e).attr('colspan');
+    var _colspan = e.getAttribute('colspan');
     _colspan = _colspan ? parseInt(_colspan) : 1;
     return {
       row : row,
@@ -232,8 +232,11 @@ function Kanban() {
     defaultTemplate : null,
     tickets : null,
     dropAction : null,
-    ticketSelector : null
+    dropObserver : null,
+    ticketSelector : null,
+    pointerDragEnabled : false
   };
+  var dropBoundCells = new WeakSet();
 
   // everything that is needed to init the internal rulematrix
   var initRulematrix = function(kanbanboard, rules) {
@@ -250,31 +253,29 @@ function Kanban() {
       seek : function(kanbanboard, rulematrix, rules, collector, apply, fromTopLeft) {
         fromTopLeft = fromTopLeft ? fromTopLeft : false;
         var that = this;
-        $('tr', kanbanboard).children().each(function(i, e) {
-          if (!($(e).is('th[data-kb-col]') || $(e).is('td[data-kb-col]'))) {
-            return;
-          }
-          var result = ArrayList();
+        kanbanboard.querySelectorAll('tr').forEach(function(tr) {
+          Array.from(tr.children).forEach(function(e) {
+            if (!e.matches('th[data-kb-col],td[data-kb-col]')) {
+              return;
+            }
+            var result = ArrayList();
 
-          // coordinates and area
-          _a = getArea(e);
+            // coordinates and area
+            var _a = getArea(e);
 
-          // seek rows upwards (fromTopLeft =
-          // false), downwards
-          // (fromTopLeft = true)
-          last = that.CONTINUE;
-          for (var _r = _a.row; _r >= 0 && _r < rulematrix.length && last === that.CONTINUE; (fromTopLeft ? _r++ : _r--)) {
-            last = collector(_r, _a.col, (fromTopLeft ? _r < _a.row + _a.rowspan : _r === _a.row), rulematrix[_r][_a.col], rules, result);
-          }
-          // seek cols to leftwards
-          // (fromTopLeft = false),
-          // rightwards (fromTopLeft = true)
-          last = that.LAST_BOTH === last ? that.LAST_BOTH : that.CONTINUE;
-          for (var _c = _a.col + (fromTopLeft ? 1 : -1); _c >= 0 && _c < rulematrix[0].length && last === that.CONTINUE; (fromTopLeft ? _c++ : _c--)) {
-            last = collector(_a.row, _c, (fromTopLeft ? _c < _a.col + _a.colspan : false), rulematrix[_a.row][_c], rules, result);
-          }
+            // seek rows upwards (fromTopLeft = false), downwards (fromTopLeft = true)
+            var last = that.CONTINUE;
+            for (var _r = _a.row; _r >= 0 && _r < rulematrix.length && last === that.CONTINUE; (fromTopLeft ? _r++ : _r--)) {
+              last = collector(_r, _a.col, (fromTopLeft ? _r < _a.row + _a.rowspan : _r === _a.row), rulematrix[_r][_a.col], rules, result);
+            }
+            // seek cols to leftwards (fromTopLeft = false), rightwards (fromTopLeft = true)
+            last = that.LAST_BOTH === last ? that.LAST_BOTH : that.CONTINUE;
+            for (var _c = _a.col + (fromTopLeft ? 1 : -1); _c >= 0 && _c < rulematrix[0].length && last === that.CONTINUE; (fromTopLeft ? _c++ : _c--)) {
+              last = collector(_a.row, _c, (fromTopLeft ? _c < _a.col + _a.colspan : false), rulematrix[_a.row][_c], rules, result);
+            }
 
-          apply(rulematrix[_a.row][_a.col], result);
+            apply(rulematrix[_a.row][_a.col], result);
+          });
         });
       }
     };
@@ -282,10 +283,13 @@ function Kanban() {
     // basic init
     var init = function(kanbanboard) {
       var rulematrix = ArrayList();
-      var total_rows = $('tr', kanbanboard).length;
+      var rows = kanbanboard.querySelectorAll('tr');
+      var total_rows = rows.length;
       var total_cols = 0;
-      $('tr', kanbanboard).first().find('th,td').each(function(i, e) {
-        var _colspan = $(e).attr('colspan');
+      Array.from(rows[0].children).filter(function(e) {
+        return e.matches('th,td');
+      }).forEach(function(e) {
+        var _colspan = e.getAttribute('colspan');
         _colspan = _colspan ? parseInt(_colspan) : 1;
         total_cols += _colspan;
       });
@@ -301,30 +305,30 @@ function Kanban() {
     // copy attribute from html to rulematrix object
     var applyAttributes = function(kanbanboard, rulematrix) {
       var row = -1;
-      $('tr', kanbanboard).each(function(ir, er) {
+      kanbanboard.querySelectorAll('tr').forEach(function(er) {
         row++;
-        $(er).children().each(function(ic, ec) {
-          if (!$(ec).is('th,td')) {
+        Array.from(er.children).forEach(function(ec) {
+          if (!ec.matches('th,td')) {
             return;
           }
 
           var rulematrixCell = {
-            matcher : $(ec).attr('data-kb-rules'),
-            limit : $(ec).attr('data-kb-limit'),
-            limitArea : $(ec).attr('data-kb-limit-area'),
-            callbacks : $(ec).attr('data-kb-callbacks'),
-            callbacksArea : $(ec).attr('data-kb-callbacks-area'),
-            template : $(ec).attr('data-kb-template'),
-            isHeader : $(ec).is('th'),
+            matcher : ec.getAttribute('data-kb-rules'),
+            limit : ec.getAttribute('data-kb-limit'),
+            limitArea : ec.getAttribute('data-kb-limit-area'),
+            callbacks : ec.getAttribute('data-kb-callbacks'),
+            callbacksArea : ec.getAttribute('data-kb-callbacks-area'),
+            template : ec.getAttribute('data-kb-template'),
+            isHeader : ec.matches('th'),
             rules : null,
             styles : null,
             tickets : ArrayList()
           };
 
-          var _rowspan = $(ec).attr('rowspan');
+          var _rowspan = ec.getAttribute('rowspan');
           _rowspan = _rowspan ? parseInt(_rowspan) : 1;
 
-          var _colspan = $(ec).attr('colspan');
+          var _colspan = ec.getAttribute('colspan');
           _colspan = _colspan ? parseInt(_colspan) : 1;
 
           var _i = 0;
@@ -345,8 +349,8 @@ function Kanban() {
 
           // remember
           // coordinates
-          $(ec).attr('data-kb-row', String(row));
-          $(ec).attr('data-kb-col', String(1 + _i - _colspan));
+          ec.setAttribute('data-kb-row', String(row));
+          ec.setAttribute('data-kb-col', String(1 + _i - _colspan));
         });
       });
     };
@@ -443,7 +447,7 @@ function Kanban() {
         }
         if (self && !rulematrixCell[what]) {
           return _seeker.LAST_BOTH;
-        } else if (!self && typeof rulematrixCell[what] !== 'undefined') {
+        } else if (!self && rulematrixCell[what] !== null && typeof rulematrixCell[what] !== 'undefined') {
           return _seeker.LAST;
         } else if (rulematrixCell.isHeader && (!self || result.length === 0)) {
           return _seeker.CONTINUE;
@@ -539,7 +543,7 @@ function Kanban() {
 
     var conserven = [ tickets ];
 
-    $('td[data-kb-col]', _innerState.kanbanboard).each(function(i, e) {
+    _innerState.kanbanboard.querySelectorAll('td[data-kb-col]').forEach(function(e) {
 
       var remainingConserven = Array();
 
@@ -580,7 +584,7 @@ function Kanban() {
       }
       conserven = remainingConserven;
     });
-    return conserven[0];
+    return conserven[0] || [];
   };
 
   var dropHandler = function(ticketId, target, source) {
@@ -613,20 +617,26 @@ function Kanban() {
     return success;
   };
 
+  var completeDrop = function(ticketId, ticketElement, target, source) {
+    if (!ticketElement || !source || !dropHandler(ticketId, target, source)) {
+      return false;
+    }
+    target.appendChild(ticketElement);
+    ticketElement.classList.add('data-kb-dragged');
+    if (_innerState.dropObserver) {
+      _innerState.dropObserver(ticketId, source, target);
+    }
+    return true;
+  };
+
   // load kanbanboard as html from url and init html and rules
-  this.load = function(url, rules, callbacks) {
-    var that = this;
-    $.ajax({
-      url : url,
-      async : false,
-      cache : false,
-      success : function(html) {
-        that.init(html, rules, callbacks);
-      },
-      error : function(e) {
-        console.log(e)
-      }
-    });
+  this.load = async function(url, rules, callbacks) {
+    var response = await fetch(url, { cache : 'no-store' });
+    if (!response.ok) {
+      throw new Error('Unable to load kanban board: ' + response.status + ' ' + response.statusText);
+    }
+    this.init(await response.text(), rules, callbacks);
+    return this;
   };
 
   // initializes kanbanboard from html and derives rulematrix with rules, limits
@@ -634,7 +644,18 @@ function Kanban() {
   this.init = function(html, rules, callbacks) {
     _innerState.rules = rules;
     _innerState.callbacks = callbacks;
-    _innerState.kanbanboard = $(html);
+    if (typeof html === 'string') {
+      var parsed = new DOMParser().parseFromString(html, 'text/html');
+      _innerState.kanbanboard = parsed.querySelector('table');
+    } else if (html && html.matches && html.matches('table')) {
+      _innerState.kanbanboard = html.cloneNode(true);
+    } else if (html && html.querySelector) {
+      var table = html.querySelector('table');
+      _innerState.kanbanboard = table ? table.cloneNode(true) : null;
+    }
+    if (!_innerState.kanbanboard) {
+      throw new Error('Kanban board markup must contain a table.');
+    }
     _innerState.rulematrix = initRulematrix(_innerState.kanbanboard, _innerState.rules);
   };
 
@@ -660,6 +681,24 @@ function Kanban() {
     return result;
   };
 
+  this.getBoardElement = function() {
+    return _innerState.kanbanboard;
+  };
+
+  this.getTemplateFromCell = function(row, col) {
+    return _innerState.rulematrix[row][col].template;
+  };
+
+  this.getStylesFromCell = function(row, col) {
+    return _innerState.rulematrix[row][col].styles.slice();
+  };
+
+  this.getRuleNamesFromCell = function(row, col) {
+    return _innerState.rulematrix[row][col].rules.map(function(rule) {
+      return (rule.negate ? '!' : '') + rule.name;
+    });
+  };
+
   this.getTicketsFromArea = function(area) {
     var total = ArrayList();
     for (var row = area.from.row; row <= area.to.row; row++) {
@@ -673,7 +712,7 @@ function Kanban() {
   // applies wips and writes them on board
   this.validate = function() {
     var that = this;
-    $('th[data-kb-limit]', _innerState.kanbanboard).each(function(i, e) {
+    _innerState.kanbanboard.querySelectorAll('th[data-kb-limit]').forEach(function(e) {
       var _a = getArea(e);
       var rulematrixCell = _innerState.rulematrix[_a.row][_a.col];
       if (!rulematrixCell.limitArea) {
@@ -694,10 +733,10 @@ function Kanban() {
         style = 'wip_unknown';
       }
 
-      $(e).addClass(style);
-      var wipstatement = wipStatement($(e).attr('data-kb-limit'), total.length);
+      e.classList.add(style);
+      var wipstatement = wipStatement(e.getAttribute('data-kb-limit'), total.length);
       if (wipstatement) {
-        $(e).html('<nobr class="' + style + ' wip">' + wipstatement + '</nobr>');
+        e.innerHTML = '<nobr class="' + style + ' wip">' + wipstatement + '</nobr>';
       }
     });
   };
@@ -707,7 +746,7 @@ function Kanban() {
       throw 'callbacks not initialized!';
     }
     var that = this;
-    $('th[data-kb-callbacks]', _innerState.kanbanboard).each(function(i, e) {
+    _innerState.kanbanboard.querySelectorAll('th[data-kb-callbacks]').forEach(function(e) {
       var _a = getArea(e);
       var rulematrixCell = _innerState.rulematrix[_a.row][_a.col];
       if (!rulematrixCell.callbacks || !rulematrixCell.callbacksArea) {
@@ -715,33 +754,37 @@ function Kanban() {
       }
 
       var total = that.getTicketsFromArea(rulematrixCell.callbacksArea);
-      var callback = rulematrixCell.callbacks.split(',');
-      for (var i = 0; i < callback.length; i++) {
-        _innerState.callbacks[callback].perform(total, e, _innerState.kanbanboard);
-      }
+      rulematrixCell.callbacks.split(',').forEach(function(name) {
+        _innerState.callbacks[name].perform(total, e, _innerState.kanbanboard);
+      });
     });
   };
 
   // remove all tickets from kanbanboard
   this.reset = function() {
     if (_innerState.callbacks) {
-      $('th[data-kb-callbacks]', _innerState.kanbanboard).each(function(i, e) {
+      _innerState.kanbanboard.querySelectorAll('th[data-kb-callbacks]').forEach(function(e) {
         var _a = getArea(e);
         var rulematrixCell = _innerState.rulematrix[_a.row][_a.col];
-        _innerState.callbacks[rulematrixCell.callbacks].reset(e, _innerState.kanbanboard);
+        (rulematrixCell.callbacks || '').split(',').filter(Boolean).forEach(function(name) {
+          var callback = _innerState.callbacks[name];
+          if (callback && callback.reset) {
+            callback.reset(e, _innerState.kanbanboard);
+          }
+        });
       });
     }
 
-    $('th[data-kb-limit]', _innerState.kanbanboard).each(function(i, e) {
-      $(e).removeClass('wip_low wip_ok wip_high wip_unknown');
-      var wipstatement = wipStatement($(e).attr('data-kb-limit'));
+    _innerState.kanbanboard.querySelectorAll('th[data-kb-limit]').forEach(function(e) {
+      e.classList.remove('wip_low', 'wip_ok', 'wip_high', 'wip_unknown');
+      var wipstatement = wipStatement(e.getAttribute('data-kb-limit'));
       if (wipstatement) {
-        $(e).html('<nobr class="wip">' + wipstatement + '</nobr>');
+        e.innerHTML = '<nobr class="wip">' + wipstatement + '</nobr>';
       }
     });
 
-    $('td[data-kb-col]', _innerState.kanbanboard).each(function(i, e) {
-      $(e).html('');
+    _innerState.kanbanboard.querySelectorAll('td[data-kb-col]').forEach(function(e) {
+      e.replaceChildren();
     });
 
     _innerState.tickets = null;
@@ -757,10 +800,9 @@ function Kanban() {
     }
   };
 
-  // create html for current board (incl. current state) and add it to
-  // jquery-selector
+  // Create the current board and attach it to a DOM element.
   this.renderboard = function(selector, templates) {
-    $('td[data-kb-col]', _innerState.kanbanboard).each(function(i, e) {
+    _innerState.kanbanboard.querySelectorAll('td[data-kb-col]').forEach(function(e) {
       var _a = getArea(e);
       var rulematrixCell = _innerState.rulematrix[_a.row][_a.col];
       var renderer;
@@ -771,35 +813,116 @@ function Kanban() {
       }
       for (var t = 0; t < rulematrixCell.tickets.length; t++) {
         try {
-          $(e).append(renderer(rulematrixCell.tickets[t], rulematrixCell.styles));
+          e.insertAdjacentHTML('beforeend', renderer(rulematrixCell.tickets[t], rulematrixCell.styles));
         } catch (exception) {
           throw 'Exception during rendering ticket <' + t + '> with renderer <' + rulematrixCell.template + '>:' + exception;
         }
       }
     });
 
-    $(selector).html(_innerState.kanbanboard);
-
-    // drag & drop support
-    if (_innerState.dropAction && _innerState.ticketSelector) {
-      $('td[data-kb-col] > [data-kb-ticket-id]', _innerState.kanbanboard).draggable({
-        helper : 'clone',
-        opacity : 0.66,
-        snap : 'outer',
-        cursor : 'move'
-      });
-
-      $('td[data-kb-col]', _innerState.kanbanboard).droppable({
-        drop : function(event, ui) {
-          var ticketId = ui.draggable.attr('data-kb-ticket-id');
-          var success = dropHandler(ticketId, $(this), $(ui.draggable).closest('td[data-kb-col]'));
-          if (success) {
-            $(this).append(ui.draggable);
-            ui.draggable.addClass('data-kb-dragged');
-          }
-        }
-      });
+    var target = typeof selector === 'string' ? document.querySelector(selector) : selector;
+    if (!target) {
+      throw new Error('Kanban render target was not found.');
     }
+    target.replaceChildren(_innerState.kanbanboard);
+
+    this.enableDragAndDrop();
+  };
+
+  this.enableDragAndDrop = function() {
+    if (!_innerState.dropAction || !_innerState.ticketSelector) {
+      return;
+    }
+    _innerState.kanbanboard.querySelectorAll('td[data-kb-col] > [data-kb-ticket-id]').forEach(function(ticketElement) {
+      ticketElement.draggable = true;
+      ticketElement.addEventListener('dragstart', function(event) {
+        event.dataTransfer.setData('text/plain', ticketElement.getAttribute('data-kb-ticket-id'));
+      });
+    });
+
+    _innerState.kanbanboard.querySelectorAll('td[data-kb-col]').forEach(function(cell) {
+      if (dropBoundCells.has(cell)) {
+        return;
+      }
+      dropBoundCells.add(cell);
+      cell.addEventListener('dragover', function(event) {
+        event.preventDefault();
+      });
+      cell.addEventListener('drop', function(event) {
+        event.preventDefault();
+        var ticketId = event.dataTransfer.getData('text/plain');
+        var ticketElement = Array.from(_innerState.kanbanboard.querySelectorAll('[data-kb-ticket-id]')).find(function(element) {
+          return element.getAttribute('data-kb-ticket-id') === ticketId;
+        });
+        var source = ticketElement && ticketElement.closest('td[data-kb-col]');
+        completeDrop(ticketId, ticketElement, cell, source);
+      });
+    });
+  };
+
+  this.enablePointerDragAndDrop = function() {
+    if (_innerState.pointerDragEnabled || !_innerState.dropAction || !_innerState.ticketSelector) {
+      return;
+    }
+
+    var board = _innerState.kanbanboard;
+    var drag = null;
+    board.querySelectorAll('td[data-kb-col] > [data-kb-ticket-id]').forEach(function(ticketElement) {
+      ticketElement.draggable = false;
+      ticketElement.setAttribute('data-kb-draggable', 'true');
+    });
+
+    board.addEventListener('pointerdown', function(event) {
+      if (event.button !== 0) return;
+      var ticketElement = event.target.closest('td[data-kb-col] > [data-kb-ticket-id]');
+      if (!ticketElement) return;
+      drag = {
+        id: ticketElement.getAttribute('data-kb-ticket-id'),
+        element: ticketElement,
+        source: ticketElement.closest('td[data-kb-col]'),
+        startX: event.clientX,
+        startY: event.clientY,
+        pointerId: event.pointerId,
+        active: false
+      };
+    });
+
+    board.addEventListener('pointermove', function(event) {
+      if (!drag || drag.pointerId !== event.pointerId) return;
+      if (!drag.active && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) < 6) return;
+      drag.active = true;
+      event.preventDefault();
+      board.ownerDocument.documentElement.classList.add('kanban-pointer-dragging');
+      drag.element.classList.add('is-dragging');
+      board.querySelectorAll('.is-drop-target').forEach(function(cell) {
+        cell.classList.remove('is-drop-target');
+      });
+      var hovered = board.ownerDocument.elementFromPoint(event.clientX, event.clientY);
+      var target = hovered && hovered.closest('td[data-kb-col]');
+      if (target) target.classList.add('is-drop-target');
+    });
+
+    var finishPointerDrag = function(event) {
+      if (!drag || drag.pointerId !== event.pointerId) return;
+      var currentDrag = drag;
+      drag = null;
+      board.ownerDocument.documentElement.classList.remove('kanban-pointer-dragging');
+      currentDrag.element.classList.remove('is-dragging');
+      board.querySelectorAll('.is-drop-target').forEach(function(cell) {
+        cell.classList.remove('is-drop-target');
+      });
+      if (!currentDrag.active) return;
+
+      var hovered = board.ownerDocument.elementFromPoint(event.clientX, event.clientY);
+      var target = hovered && hovered.closest('td[data-kb-col]');
+      if (target && target !== currentDrag.source) {
+        completeDrop(currentDrag.id, currentDrag.element, target, currentDrag.source);
+      }
+    };
+
+    board.addEventListener('pointerup', finishPointerDrag);
+    board.addEventListener('pointercancel', finishPointerDrag);
+    _innerState.pointerDragEnabled = true;
   };
 
   // set default template for rendering tickets
@@ -812,8 +935,8 @@ function Kanban() {
   this.debug = function(activate) {
     if (activate) {
       // populate debug information
-      $('th[data-kb-col],td[data-kb-col]', _innerState.kanbanboard).each(
-          function(i, e) {
+      _innerState.kanbanboard.querySelectorAll('th[data-kb-col],td[data-kb-col]').forEach(
+          function(e) {
             // coordinates
             var _a = getArea(e);
 
@@ -829,7 +952,7 @@ function Kanban() {
                   styles.push(rules[i].style);
                 }
               }
-              $(e).attr('data-kb-debug-rule', String(rulenames));
+              e.setAttribute('data-kb-debug-rule', String(rulenames));
             }
 
             var template = _innerState.rulematrix[_a.row][_a.col].template;
@@ -837,28 +960,27 @@ function Kanban() {
             var limitArea = _innerState.rulematrix[_a.row][_a.col].limitArea;
 
             // set debug info as tooltip
-            var s = 'DEBUG: ' + ($(e).is('th') ? 'TH' : 'TD') + '(' + _a.row + '|' + _a.col + ')' + ', RULES: ' + JSON.stringify(rulenames) + ', LIMIT: ' + limit + (limit ? ' ' + JSON.stringify(limitArea) : '') + ', TEMPLATE: ' + template + ', STYLES: '
+            var s = 'DEBUG: ' + (e.matches('th') ? 'TH' : 'TD') + '(' + _a.row + '|' + _a.col + ')' + ', RULES: ' + JSON.stringify(rulenames) + ', LIMIT: ' + limit + (limit ? ' ' + JSON.stringify(limitArea) : '') + ', TEMPLATE: ' + template + ', STYLES: '
                 + JSON.stringify(styles);
-            $(e).attr('title', s);
+            e.setAttribute('title', s);
           });
     } else {
-      $('td[data-kb-col],th[data-kb-col]', _innerState.kanbanboard).each(function(i, e) {
-        var title = $(e).attr('title');
+      _innerState.kanbanboard.querySelectorAll('td[data-kb-col],th[data-kb-col]').forEach(function(e) {
+        var title = e.getAttribute('title');
         if (title && title.startsWith('DEBUG:')) {
-          $(e).removeAttr('title');
+          e.removeAttribute('title');
         }
       });
     }
   };
 
   this.compile = function() {
-    $('th[data-kb-col],td[data-kb-col]', _innerState.kanbanboard).each(
-      function(i, e) {
+    _innerState.kanbanboard.querySelectorAll('th[data-kb-col],td[data-kb-col]').forEach(
+      function(e) {
         // coordinates
         var _a = getArea(e);
 
-        var $_e = $(e);
-        var isHeader = $_e.is('th');
+        var isHeader = e.matches('th');
 
         // 1. set rules for this cell
         var rules = _innerState.rulematrix[_a.row][_a.col].rules;
@@ -867,45 +989,45 @@ function Kanban() {
           for (var i = 0; i < rules.length; i++) {
             rulenames += (rules[i].negate ? '!' : '') + rules[i].name + ',';
           }
-          $_e.attr('data-kb-rules', rulenames + 'LAST');
+          e.setAttribute('data-kb-rules', rulenames + 'LAST');
         } else {
-          $_e.removeAttr('data-kb-rules');
+          e.removeAttribute('data-kb-rules');
         }
 
         // 2. Set template for cell
         var template = _innerState.rulematrix[_a.row][_a.col].template;
         if (template && !isHeader) {
-          $_e.attr('data-kb-template', template);
+          e.setAttribute('data-kb-template', template);
         } else {
-          $_e.removeAttr('data-kb-template');
+          e.removeAttribute('data-kb-template');
         }
 
         // 3. Set limit for cell
         var limit = _innerState.rulematrix[_a.row][_a.col].limit;
         var limitArea = _innerState.rulematrix[_a.row][_a.col].limitArea;
         if (limit && limitArea && isHeader) {
-          $_e.attr('data-kb-limit', limit);
-          $_e.attr('data-kb-limit-area', limitArea.from.row + ',' + limitArea.from.col + ',' + limitArea.to.row + ',' + limitArea.to.col);
+          e.setAttribute('data-kb-limit', limit);
+          e.setAttribute('data-kb-limit-area', limitArea.from.row + ',' + limitArea.from.col + ',' + limitArea.to.row + ',' + limitArea.to.col);
         } else {
-          $_e.removeAttr('data-kb-limit');
-          $_e.removeAttr('data-kb-limit-area');
+          e.removeAttribute('data-kb-limit');
+          e.removeAttribute('data-kb-limit-area');
         }
 
         // 4. Set callbacks
-        var callbacks = _innerState.rulematrix[_a.row][_a.col].limit;
-        var callbacksArea = _innerState.rulematrix[_a.row][_a.col].limitArea;
+        var callbacks = _innerState.rulematrix[_a.row][_a.col].callbacks;
+        var callbacksArea = _innerState.rulematrix[_a.row][_a.col].callbacksArea;
         if (callbacks && callbacksArea && isHeader) {
-          $_e.attr('data-kb-callbacks', callbacks);
-          $_e.attr('data-kb-callbacks-area', callbacksArea.from.row + ',' + callbacksArea.from.col + ',' + callbacksArea.to.row + ',' + callbacksArea.to.col);
+          e.setAttribute('data-kb-callbacks', callbacks);
+          e.setAttribute('data-kb-callbacks-area', callbacksArea.from.row + ',' + callbacksArea.from.col + ',' + callbacksArea.to.row + ',' + callbacksArea.to.col);
         } else {
-          $_e.removeAttr('data-kb-callbacks');
-          $_e.removeAttr('data-kb-callbacks-area');
+          e.removeAttribute('data-kb-callbacks');
+          e.removeAttribute('data-kb-callbacks-area');
         }
 
         // remove debug information
-        var title = $_e.attr('title');
+        var title = e.getAttribute('title');
         if (title && title.startsWith('DEBUG:')) {
-          $_e.removeAttr('title');
+          e.removeAttribute('title');
         }
       }
     );
@@ -921,6 +1043,10 @@ function Kanban() {
 
   this.setTicketSelector = function(selector) {
     _innerState.ticketSelector = selector;
+  };
+
+  this.setDropObserver = function(observer) {
+    _innerState.dropObserver = observer;
   };
 
 }
